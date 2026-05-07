@@ -79,7 +79,9 @@
     </head>
     <body>
         <canvas id="cats"></canvas>
-        <div id="editor" contenteditable="">CATS!</div>
+        <div id="editor" contenteditable="">
+            <div>CATS!</div>
+        </div>
         <div id="debug" class="hidden">
             Timer at: <span id="timerAtDebugInfo">(Loading...)</span><br />
             Start time: <span id="startTimeDebugInfo">(Loading...)</span><br />
@@ -102,13 +104,35 @@
 
             let searchParams = new URLSearchParams(location.search);
             if (searchParams.get("text") !== null) {
-                editor.innerText = searchParams.get("text");
+                editor.innerHTML = "";
+                const text = searchParams.get("text").split("\n");
+                for (let i = 0; i < text.length; i++) {
+                    let el = document.createElement("div");
+                    el.innerText = text[i];
+                    editor.appendChild(el);
+                }
             }
             if (searchParams.get("debug") == "1") {
                 document.querySelector("#debug").classList.remove("hidden");
             }
+            const getText = function () {
+                let children = editor.childNodes;
+                let output = "";
+                for (let i = 0; i < children.length; i++) {
+                    if (children[i].nodeName === "BR") {
+                        output += "\n";
+                    } else if (children[i].nodeName === "#text") {
+                        output += children[i].nodeValue.replaceAll(/\n/g, "");
+                    } else {
+                        output +=
+                            (i === 0 ? "" : "\n") +
+                            children[i].innerText.replaceAll(/\n/g, "");
+                    }
+                }
+                return output;
+            };
             const observer = new MutationObserver(() => {
-                searchParams.set("text", editor.innerText);
+                searchParams.set("text", getText());
                 const url = new URL(location);
                 url.search = searchParams.toString();
                 history.pushState({}, "", url);
@@ -211,7 +235,7 @@
                     `${toStringWithPrecision(startTime, 4, 3)} seconds`;
                 document.querySelector("#currentTimeDebugInfo").innerText =
                     `${toStringWithPrecision(currentTime, 4, 3)} seconds`;
-                const textString = editor.innerText;
+                const textString = getText();
                 const margin = 16;
                 /** @type {CanvasGradient} */
                 const gradient = ctx.createLinearGradient(
