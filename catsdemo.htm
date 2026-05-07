@@ -1,0 +1,226 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>CATS! In Rainbow! :3</title>
+        <style>
+            body {
+                background-color: #000;
+            }
+            #cats {
+                position: fixed;
+                inset: 0;
+                display: block;
+                width: 100vw;
+                height: 100vh;
+                margin: 0;
+                background-color: #000;
+                color: #fff;
+            }
+            #gradientDebugLabel {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+            }
+            #gradientDebug {
+                height: 0.5em;
+                display: inline-block;
+                background: #f0f;
+                border-radius: 0.25em;
+                flex-grow: 1;
+            }
+            .gradientStopColourView {
+                border-radius: 100%;
+                aspect-ratio: 1;
+                border: 0.25em solid lightgray;
+                background-color: #f0f;
+                height: 0.5em;
+                display: block;
+                position: relative;
+                left: 0;
+                top: 0;
+                bottom: 0;
+            }
+            .gradientStopView {
+            }
+            #debug {
+                position: fixed;
+                top: 0.25em;
+                left: 0.25em;
+                color: #fff;
+                background-color: #0008;
+                backdrop-filter: blur(8px);
+                border: 1px solid #fff;
+                border-radius: 8pt;
+                min-width: 20em;
+                z-index: 999999;
+                padding: 0.25em;
+            }
+            .hidden {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <template id="gradientDebugTemplate">
+            <div class="gradientStopView">
+                <div class="gradientStopColourView"></div>
+                <p class="gradientStopHexCode"></p>
+            </div>
+        </template>
+        <canvas id="cats"> </canvas>
+        <div id="debug" class="hidden">
+            Timer at: <span id="timerAtDebugInfo">(Loading...)</span><br />
+            Start time: <span id="startTimeDebugInfo">(Loading...)</span><br />
+            Current time:
+            <span id="currentTimeDebugInfo">(Loading...)</span><br />
+            <label id="gradientDebugLabel">
+                Gradient:
+                <div id="gradientDebug"></div>
+            </label>
+        </div>
+        <script>
+            /** @type {HTMLCanvasElement} */
+            const catsCanvas = document.querySelector("#cats");
+            /** @type {CanvasRenderingContext2D} */
+            const ctx = catsCanvas.getContext("2d");
+            /** @type {double | null} */
+            let startTime = document.timeline.currentTime;
+            if (startTime !== null) {
+                startTime /= 1000.0;
+            }
+            let timer = 0.0;
+            const roundToDecimal = function (num, precision) {
+                const tempMult = Math.pow(10, precision);
+                return Math.round(num * tempMult) / tempMult;
+            };
+            const toStringWithPrecision = function (
+                num,
+                minWholeZeroes = 0,
+                afterDecimalPoint = 5,
+            ) {
+                let output = `${roundToDecimal(num, afterDecimalPoint)}`;
+                let dotIndex = output.indexOf(".");
+                if (dotIndex < 0) {
+                    output += ".";
+                    dotIndex = output.indexOf(".");
+                }
+                while (dotIndex < minWholeZeroes) {
+                    output = `0${output}`;
+                    dotIndex += 1;
+                }
+                while (output.length - dotIndex - 1 < afterDecimalPoint) {
+                    output = `${output}0`;
+                }
+                return output;
+            };
+            const hue2rgb = function (h) {
+                const f = function (n) {
+                    const k = (n + h / 60.0) % 6.0;
+                    return (
+                        1.0 - Math.max(0.0, Math.min(k, Math.min(4.0 - k, 1.0)))
+                    );
+                };
+                let data = [f(5.0), f(3.0), f(1.0)];
+                const ch2hex = function (val) {
+                    /** @type {string} */
+                    let hex = Math.min(
+                        255,
+                        Math.max(0, Math.round(val * 255.0)),
+                    ).toString(16);
+                    for (let i = hex.length; i < 2; i++) {
+                        hex = `0${hex}`;
+                    }
+                    return hex;
+                };
+                return `#${ch2hex(data[0])}${ch2hex(data[1])}${ch2hex(data[2])}`;
+            };
+            /**
+             * @param {DOMHighResTimestamp|undefined} timestamp
+             * @param {boolean} queueNextFrame
+             */
+            const doCatsDemo = function (
+                timestamp = undefined,
+                queueNextFrame = true,
+            ) {
+                const currentTime =
+                    (timestamp === undefined
+                        ? document.timeline.currentTime
+                        : timestamp) / 1000.0;
+                if (startTime === null) {
+                    startTime = currentTime;
+                }
+                if (startTime === null) {
+                    timer = 0.0;
+                } else {
+                    timer = currentTime - startTime;
+                }
+                document.querySelector("#timerAtDebugInfo").innerText =
+                    `${toStringWithPrecision(timer, 4, 3)} seconds`;
+                document.querySelector("#startTimeDebugInfo").innerText =
+                    `${toStringWithPrecision(startTime, 4, 3)} seconds`;
+                document.querySelector("#currentTimeDebugInfo").innerText =
+                    `${toStringWithPrecision(currentTime, 4, 3)} seconds`;
+                const textString = "CATS!";
+                const margin = 16;
+                /** @type {CanvasGradient} */
+                const gradient = ctx.createLinearGradient(
+                    margin,
+                    margin,
+                    catsCanvas.width - margin,
+                    catsCanvas.height - margin,
+                );
+                let gradientText = "linear-gradient(to right, ";
+                for (let i = 0; i < 1.0; i += 1.0 / 64.0) {
+                    const hexCode = hue2rgb((i + timer / 5.0) * 360.0);
+                    gradient.addColorStop(i, hexCode);
+                    gradientText += `${hexCode}, `;
+                }
+                gradientText = gradientText.replace(/\, $/, ")");
+                document.querySelector("#gradientDebug").style.background =
+                    gradientText;
+                ctx.fillStyle = "#000000";
+                ctx.strokeStyle = "#000000";
+                ctx.fillRect(0, 0, catsCanvas.width, catsCanvas.height);
+                ctx.fillStyle = gradient;
+                ctx.strokeStyle = "#ffffff";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                let fontSize = Math.round(
+                    catsCanvas.height / 2.0 - margin * 2.0,
+                );
+                ctx.font = `${fontSize}px sans-serif`;
+                let textMetrics = ctx.measureText(textString);
+                const w = textMetrics.width;
+                if (w > catsCanvas.width - margin * 2.0) {
+                    fontSize =
+                        fontSize * ((catsCanvas.width - margin * 2.0) / w);
+                }
+                ctx.font = `${fontSize}px sans-serif`;
+                textMetrics = ctx.measureText(textString);
+                const pos = {
+                    x: catsCanvas.width / 2.0,
+                    y: catsCanvas.height / 2.0,
+                };
+                ctx.fillText(textString, pos.x, pos.y);
+                ctx.strokeText(textString, pos.x, pos.y);
+                if (queueNextFrame) {
+                    requestAnimationFrame(doCatsDemo);
+                }
+            };
+            const updateSize = function () {
+                catsCanvas.width = window.innerWidth;
+                catsCanvas.height = window.innerHeight;
+                doCatsDemo(0.0, false);
+            };
+            window.addEventListener("resize", updateSize);
+            updateSize();
+            doCatsDemo(0.0, true);
+            let searchParams = new URLSearchParams(location.search);
+            if (searchParams.get("debug") == "1") {
+                document.querySelector("#debug").classList.remove("hidden");
+            }
+        </script>
+    </body>
+</html>
