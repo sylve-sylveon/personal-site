@@ -16,7 +16,7 @@
                 height: 100vh;
                 margin: 0;
                 background-color: #000;
-                color: #fff;
+                color: transparent;
             }
             #gradientDebugLabel {
                 display: flex;
@@ -57,19 +57,26 @@
                 z-index: 999999;
                 padding: 0.25em;
             }
+            #editor {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                font-family: sans-serif;
+                color: transparent;
+                background: transparent;
+                caret-color: #fff;
+            }
             .hidden {
                 display: none;
             }
         </style>
     </head>
     <body>
-        <template id="gradientDebugTemplate">
-            <div class="gradientStopView">
-                <div class="gradientStopColourView"></div>
-                <p class="gradientStopHexCode"></p>
-            </div>
-        </template>
-        <canvas id="cats"> </canvas>
+        <canvas id="cats"></canvas>
+        <div id="editor" contenteditable="">CATS!</div>
         <div id="debug" class="hidden">
             Timer at: <span id="timerAtDebugInfo">(Loading...)</span><br />
             Start time: <span id="startTimeDebugInfo">(Loading...)</span><br />
@@ -85,8 +92,29 @@
             const catsCanvas = document.querySelector("#cats");
             /** @type {CanvasRenderingContext2D} */
             const ctx = catsCanvas.getContext("2d");
+            /** @type {HTMLTextAreaElement} */
+            const editor = document.querySelector("#editor");
             /** @type {double | null} */
             let startTime = document.timeline.currentTime;
+
+            let searchParams = new URLSearchParams(location.search);
+            if (searchParams.get("text") !== null) {
+                editor.innerText = searchParams.get("text");
+            }
+            if (searchParams.get("debug") == "1") {
+                document.querySelector("#debug").classList.remove("hidden");
+            }
+            const observer = new MutationObserver(() => {
+                searchParams.set("text", editor.innerText);
+                const url = new URL(location);
+                url.search = searchParams.toString();
+                history.pushState({}, "", url);
+            });
+            observer.observe(editor, {
+                attributes: true,
+                childList: true,
+                subtree: true,
+            });
             if (startTime !== null) {
                 startTime /= 1000.0;
             }
@@ -162,7 +190,7 @@
                     `${toStringWithPrecision(startTime, 4, 3)} seconds`;
                 document.querySelector("#currentTimeDebugInfo").innerText =
                     `${toStringWithPrecision(currentTime, 4, 3)} seconds`;
-                const textString = "CATS!";
+                const textString = editor.innerText;
                 const margin = 16;
                 /** @type {CanvasGradient} */
                 const gradient = ctx.createLinearGradient(
@@ -203,6 +231,7 @@
                     x: catsCanvas.width / 2.0,
                     y: catsCanvas.height / 2.0,
                 };
+                editor.style.fontSize = `${fontSize}px`;
                 ctx.fillText(textString, pos.x, pos.y);
                 ctx.strokeText(textString, pos.x, pos.y);
                 if (queueNextFrame) {
@@ -217,10 +246,6 @@
             window.addEventListener("resize", updateSize);
             updateSize();
             doCatsDemo(0.0, true);
-            let searchParams = new URLSearchParams(location.search);
-            if (searchParams.get("debug") == "1") {
-                document.querySelector("#debug").classList.remove("hidden");
-            }
         </script>
     </body>
 </html>
