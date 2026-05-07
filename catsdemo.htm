@@ -61,12 +61,15 @@
                 position: fixed;
                 inset: 0;
                 display: flex;
+                flex-direction: column;
+                line-height: 1em;
                 justify-content: center;
                 align-items: center;
                 text-align: center;
                 font-family: sans-serif;
                 color: transparent;
                 background: transparent;
+                white-space: pre;
                 caret-color: #fff;
             }
             .hidden {
@@ -164,6 +167,24 @@
                 };
                 return `#${ch2hex(data[0])}${ch2hex(data[1])}${ch2hex(data[2])}`;
             };
+            const measureText = function (text) {
+                var lines = text.split("\n");
+                let outWidth = 0.0;
+                for (let i = 0; i < lines.length; i++) {
+                    outWidth = Math.max(
+                        ctx.measureText(lines[i]).width,
+                        outWidth,
+                    );
+                }
+                return outWidth;
+            };
+            const drawText = function (text, x, y, lineHeight) {
+                var lines = text.split("\n");
+                for (let i = 0; i < lines.length; i++) {
+                    ctx.fillText(lines[i], x, y + i * lineHeight);
+                    ctx.strokeText(lines[i], x, y + i * lineHeight);
+                }
+            };
             /**
              * @param {DOMHighResTimestamp|undefined} timestamp
              * @param {boolean} queueNextFrame
@@ -226,14 +247,15 @@
                         fontSize * ((catsCanvas.width - margin * 2.0) / w);
                 }
                 ctx.font = `${fontSize}px sans-serif`;
-                textMetrics = ctx.measureText(textString);
                 const pos = {
                     x: catsCanvas.width / 2.0,
-                    y: catsCanvas.height / 2.0,
+                    y:
+                        (catsCanvas.height -
+                            (textString.split("\n").length - 1) * fontSize) /
+                        2.0,
                 };
                 editor.style.fontSize = `${fontSize}px`;
-                ctx.fillText(textString, pos.x, pos.y);
-                ctx.strokeText(textString, pos.x, pos.y);
+                drawText(textString, pos.x, pos.y, fontSize);
                 if (queueNextFrame) {
                     requestAnimationFrame(doCatsDemo);
                 }
